@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Floor Plan</title>
+<style>
+  :root { --accent: #0a7aff; --ink: #1c1d22; --muted: #6b6f7b; --soft: #e6efff; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #fff; color: var(--ink); overflow: hidden;
+               font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; }
+  .screen.on { display: flex; }
+  button { font: inherit; border: 0; border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 600; }
+  button:disabled { opacity: .4; }
+  .primary { background: var(--accent); color: #fff; }
+  .soft { background: var(--soft); color: var(--accent); }
+  .link { background: none; color: var(--accent); font-weight: 400; font-size: 14px; }
+
+  /* Start */
+  #start { padding: calc(env(safe-area-inset-top) + 24px) 28px calc(env(safe-area-inset-bottom) + 20px);
+           text-align: center; overflow-y: auto; }
+  #start h1 { font-size: 32px; margin: 28px 0 12px; }
+  #start p { margin: 0 0 12px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+  #start ol { text-align: left; color: var(--ink); font-size: 15px; line-height: 1.5; padding-left: 22px; margin: 6px 0 18px; }
+  .height { background: #f4f5f8; border-radius: 14px; padding: 14px 16px; text-align: left; margin-bottom: 16px; }
+  .height label { display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; }
+  .height input { width: 100%; margin: 12px 0 4px; }
+  .height small { color: var(--muted); font-size: 13px; line-height: 1.4; display: block; }
+  .grow { flex: 1; min-height: 12px; }
+  #problem { color: #c82828; font-size: 14px; min-height: 18px; }
+  #start button.primary { width: 100%; }
+
+  /* Scan */
+  #scan { background: #000; color: #fff; }
+  #video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #cross { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; pointer-events: none; }
+  .pill { background: rgba(245, 245, 247, .86); color: var(--ink); border-radius: 999px; font-size: 14px; }
+  #cancel { position: absolute; left: 16px; top: calc(env(safe-area-inset-top) + 14px); padding: 9px 16px;
+            color: var(--accent); font-weight: 400; font-size: 15px; }
+  #readout { position: absolute; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 66px);
+             padding: 8px 14px; max-width: 86%; text-align: center; }
+  #mini { position: absolute; right: 12px; top: calc(env(safe-area-inset-top) + 12px); width: 132px; height: 132px;
+          border-radius: 14px; background: rgba(255, 255, 255, .9); }
+  .controls { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 22px);
+              display: flex; gap: 10px; justify-content: center; align-items: center; padding: 0 14px; }
+  .controls button { border-radius: 999px; padding: 14px 18px; }
+  #mark { min-width: 156px; }
+  .controls .side { background: rgba(245, 245, 247, .9); color: var(--accent); min-width: 84px; }
+
+  /* Result */
+  #result { background: #fff; }
+  #plan { flex: 1; min-height: 0; width: 100%; display: block; }
+  .bar { display: flex; gap: 12px; padding: 12px 18px calc(env(safe-area-inset-bottom) + 14px); }
+  .bar button { flex: 1; }
+  .options { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); padding: 4px 0 0; }
+</style>
+</head>
+<body>
+
+<section id="start" class="screen on">
+  <h1>Floor Plan</h1>
+  <p>Measure a room with the camera and the phone's tilt sensors. Everything stays on this phone: nothing is uploaded.</p>
+  <ol>
+    <li>Stand near the middle of the room and stay on that spot.</li>
+    <li>Aim the cross at a corner where two walls meet the floor, then tap <b>Mark corner</b>.</li>
+    <li>Turn on the spot and mark each corner in order around the room.</li>
+    <li>Tap <b>Finish</b> to see the plan.</li>
+  </ol>
+  <div class="height">
+    <label><span>Phone height above the floor</span><span id="heightValue">1.40 m</span></label>
+    <input id="height" type="range" min="1.00" max="1.80" step="0.05" value="1.40">
+    <small>Hold the phone at about chest height and keep it there. Every distance is worked out from this number, so measure it once for a better result.</small>
+  </div>
+  <div id="problem"></div>
+  <div class="grow"></div>
+  <button id="begin" class="primary">Start measuring</button>
+  <button id="sample" class="link">See a sample plan</button>
+</section>
+
+<section id="scan" class="screen">
+  <video id="video" playsinline muted autoplay></video>
+  <svg id="cross" viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+    <circle cx="32" cy="32" r="13" stroke="rgba(0,0,0,.35)" stroke-width="5"/>
+    <circle cx="32" cy="32" r="13"/>
+    <path d="M32 4v15M32 45v15M4 32h15M45 32h15"/>
+    <circle cx="32" cy="32" r="1.6" fill="#fff"/>
+  </svg>
+  <button id="cancel" class="pill">Cancel</button>
+  <div id="readout" class="pill">Starting…</div>
+  <canvas id="mini"></canvas>
+  <div class="controls">
+    <button id="undo" class="side" disabled>Undo</button>
+    <button id="mark" class="primary">Mark corner</button>
+    <button id="finish" class="side" disabled>Finish</button>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <canvas id="plan"></canvas>
+  <label class="options"><input id="squared" type="checkbox" checked> Straighten the walls</label>
+  <div class="bar">
+    <button id="share" class="primary">Share PDF</button>
+    <button id="again" class="soft">New room</button>
+  </div>
+</section>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
