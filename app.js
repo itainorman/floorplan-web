@@ -19,6 +19,7 @@
   var corners = [];         // the corners marked so far
   var sensorSeen = false;
   var drawing = false;
+  var wakeLock = null;       // keeps the screen from dimming while measuring
 
   // --- Start screen ---
 
@@ -67,6 +68,7 @@
       window.addEventListener("deviceorientation", onTilt);
       show("scan");
       updateButtons();
+      keepAwake();
       drawing = true;
       requestAnimationFrame(frame);
       setTimeout(function () {
@@ -77,9 +79,11 @@
     }).catch(function (err) {
       stopCamera();
       if (err && err.message === "motion-denied") {
-        problem("Motion access was refused. Close this tab, reopen the page and allow Motion & Orientation.");
+        problem("Motion access was refused. On iPhone, close Safari completely, open the link again and tap Allow. " +
+                "If it does not ask, go to Settings, Apps, Safari, Advanced, Website Data and remove this site.");
       } else if (err && (err.name === "NotAllowedError" || err.name === "SecurityError")) {
-        problem("Camera access was refused. Allow the camera for this page and try again.");
+        problem("Camera access was refused. Tap the page settings button in the address bar, choose Website Settings, " +
+                "set Camera to Allow, then try again.");
       } else {
         problem("Could not start: " + (err && (err.message || err.name) || "unknown error"));
       }
@@ -135,15 +139,35 @@
   $("mark").addEventListener("click", function () {
     if (!aim) return;
     corners.push({ x: aim.x, y: aim.y });
+    // iPhones do not let a web page vibrate, so a brief flash confirms the tap there.
     if (navigator.vibrate) navigator.vibrate(25);
+    var flash = $("flash");
+    flash.classList.add("on");
+    setTimeout(function () { flash.classList.remove("on"); }, 60);
     updateButtons();
   });
   $("undo").addEventListener("click", function () { corners.pop(); updateButtons(); });
   $("cancel").addEventListener("click", function () { stopCamera(); show("start"); });
   $("finish").addEventListener("click", function () { stopCamera(); showResult(); });
 
+  function keepAwake() {
+    if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+    navigator.wakeLock.request("screen").then(function (lock) { wakeLock = lock; })
+      .catch(function () { /* not allowed right now; measuring still works */ });
+  }
+
+  // If the phone is locked or the tab is left mid-measure, the camera stops. Start again cleanly on return.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && drawing) {
+      stopCamera();
+      show("start");
+      problem("Measuring stopped because the page was left. Tap Start measuring to begin again.");
+    }
+  });
+
   function stopCamera() {
     drawing = false;
+    if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
     window.removeEventListener("deviceorientation", onTilt);
     if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
     stream = null;

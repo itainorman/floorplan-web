@@ -4,10 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Floor Plan">
+<meta name="theme-color" content="#ffffff">
 <title>Floor Plan</title>
 <style>
   :root { --accent: #0a7aff; --ink: #1c1d22; --muted: #6b6f7b; --soft: #e6efff; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* Stops the double-tap zoom and text selection that make a web page feel unlike an app on a phone. */
+  body { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   html, body { margin: 0; height: 100%; background: #fff; color: var(--ink); overflow: hidden;
                font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; }
@@ -31,6 +36,9 @@
   .grow { flex: 1; min-height: 12px; }
   #problem { color: #c82828; font-size: 14px; min-height: 18px; }
   #start button.primary { width: 100%; }
+  .asks { background: #f4f5f8; border-radius: 14px; padding: 12px 16px; text-align: left; font-size: 14px;
+          line-height: 1.45; color: var(--ink); margin-bottom: 14px; }
+  .asks b { display: block; margin-bottom: 4px; }
 
   /* Scan */
   #scan { background: #000; color: #fff; }
@@ -48,6 +56,9 @@
   .controls button { border-radius: 999px; padding: 14px 18px; }
   #mark { min-width: 156px; }
   .controls .side { background: rgba(245, 245, 247, .9); color: var(--accent); min-width: 84px; }
+
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #flash.on { opacity: .55; transition: none; }
 
   /* Result */
   #result { background: #fff; }
@@ -73,6 +84,11 @@
     <input id="height" type="range" min="1.00" max="1.80" step="0.05" value="1.40">
     <small>Hold the phone at about chest height and keep it there. Every distance is worked out from this number, so measure it once for a better result.</small>
   </div>
+  <div class="asks">
+    <b>Your phone will ask for two permissions</b>
+    Motion &amp; Orientation, to know where the phone is pointing, and Camera, to show what you are aiming at.
+    Tap Allow for both. Neither the picture nor the measurements are recorded or sent anywhere.
+  </div>
   <div id="problem"></div>
   <div class="grow"></div>
   <button id="begin" class="primary">Start measuring</button>
@@ -87,6 +103,7 @@
     <path d="M32 4v15M32 45v15M4 32h15M45 32h15"/>
     <circle cx="32" cy="32" r="1.6" fill="#fff"/>
   </svg>
+  <div id="flash"></div>
   <button id="cancel" class="pill">Cancel</button>
   <div id="readout" class="pill">Starting…</div>
   <canvas id="mini"></canvas>
