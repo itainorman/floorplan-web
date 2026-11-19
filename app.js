@@ -19,13 +19,14 @@
   var corners = [];         // the corners marked so far
   var sensorSeen = false;
   var drawing = false;
+  var labelSpots = [];      // where each wall's length is written on the result screen, for tapping
   var wakeLock = null;       // keeps the screen from dimming while measuring
 
   // --- Start screen ---
 
   try {
     var saved = parseFloat(localStorage.getItem("phoneHeight"));
-    if (saved >= 1 && saved <= 1.8) height = saved;
+    if (saved >= 0.6 && saved <= 2) height = saved;
   } catch (e) { /* storage can be unavailable; the default height is fine */ }
   $("height").value = height.toFixed(2);
   $("heightValue").textContent = height.toFixed(2) + " m";
@@ -251,6 +252,39 @@
   });
   $("again").addEventListener("click", function () { show("start"); });
 
+  // Every distance comes from the phone height, so one wrong height scales the whole plan.
+  // One real tape measurement is enough to put it right, and to correct the height for the next room.
+  function correctScale(measured, real) {
+    if (!(measured > 0) || !(real >= 0.2 && real <= 40)) return false;
+    var factor = real / measured;
+    corners = corners.map(function (p) { return { x: p.x * factor, y: p.y * factor }; });
+    height = Math.min(2, Math.max(0.6, height * factor));
+    $("height").value = height.toFixed(2);
+    $("heightValue").textContent = height.toFixed(2) + " m";
+    try { localStorage.setItem("phoneHeight", String(height)); } catch (e) { /* storage unavailable */ }
+    $("scaleNote").textContent = "Scale corrected from your measurement. Phone height is now set to " +
+      height.toFixed(2) + " m for the next room.";
+    drawPlan($("plan"), outline(), null);
+    return true;
+  }
+
+  $("plan").addEventListener("click", function (e) {
+    var box = this.getBoundingClientRect();
+    var x = e.clientX - box.left, y = e.clientY - box.top;
+    var best = null, bestDist = 34; // a finger is not precise, so accept taps near a length
+    labelSpots.forEach(function (s) {
+      var d = Math.hypot(s.x - x, s.y - y);
+      if (d < bestDist) { bestDist = d; best = s; }
+    });
+    if (!best) return;
+    var answer = window.prompt("How long is this wall really, in metres?", best.metres.toFixed(2));
+    if (answer === null) return;
+    var real = parseFloat(String(answer).replace(",", "."));
+    if (!correctScale(best.metres, real)) {
+      $("scaleNote").textContent = "That length was not understood. Type a number in metres, for example 3.2";
+    }
+  });
+
   // Draws the plan. With `fixed` it draws at an exact pixel size for export; otherwise it fills the canvas on screen.
   function drawPlan(canvas, pts, fixed) {
     var ctx, W, H;
@@ -308,6 +342,7 @@
     ctx.stroke();
 
     // Wall lengths, placed just outside each wall.
+    if (!fixed) labelSpots = [];
     for (var i = 0; i < pts.length; i++) {
       var p0 = pts[i], p1 = pts[(i + 1) % pts.length];
       var metres = Math.hypot(p1.x - p0.x, p1.y - p0.y);
@@ -318,7 +353,9 @@
       var nx = -(c2.y - a.y) / len, ny = (c2.x - a.x) / len;
       if (nx * (mid.x - middle.x) + ny * (mid.y - middle.y) < 0) { nx = -nx; ny = -ny; }
       var gap = wall / 2 + 9 + Math.abs(nx) * 14;
-      text(metres.toFixed(2) + " m", mid.x + nx * gap, mid.y + ny * gap, 10, DIM);
+      var lx = mid.x + nx * gap, ly = mid.y + ny * gap;
+      text(metres.toFixed(2) + " m", lx, ly, fixed ? 10 : 12, fixed ? DIM : "#0a7aff", fixed ? 400 : 600);
+      if (!fixed) labelSpots.push({ x: lx, y: ly, metres: metres });
     }
   }
 
@@ -386,6 +423,12 @@
   if (query.has("sample")) {
     corners = Core.sampleCorners();
     showResult();
+  }
+  if (query.has("scalecheck")) {
+    // Pretend the tester measured the first labelled wall at half the plan's value.
+    corners = Core.sampleCorners();
+    showResult();
+    correctScale(labelSpots[0].metres, labelSpots[0].metres / 2);
   }
   if (query.has("pdfcheck")) {
     corners = Core.sampleCorners();

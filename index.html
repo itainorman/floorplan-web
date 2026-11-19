@@ -65,6 +65,7 @@
   #plan { flex: 1; min-height: 0; width: 100%; display: block; }
   .bar { display: flex; gap: 12px; padding: 12px 18px calc(env(safe-area-inset-bottom) + 14px); }
   .bar button { flex: 1; }
+  .note { text-align: center; font-size: 13px; line-height: 1.4; color: var(--muted); padding: 6px 22px 2px; }
   .options { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); padding: 4px 0 0; }
 </style>
 </head>
@@ -75,14 +76,14 @@
   <p>Measure a room with the camera and the phone's tilt sensors. Everything stays on this phone: nothing is uploaded.</p>
   <ol>
     <li>Stand near the middle of the room and stay on that spot.</li>
-    <li>Aim the cross at a corner where two walls meet the floor, then tap <b>Mark corner</b>.</li>
+    <li>Aim the cross exactly where two walls meet the <b>floor</b>, then tap <b>Mark corner</b>. Aiming even a little up the wall makes the room come out much too big. If furniture hides a corner, aim at the floor spot where the corner would be.</li>
     <li>Turn on the spot and mark each corner in order around the room.</li>
     <li>Tap <b>Finish</b> to see the plan.</li>
   </ol>
   <div class="height">
     <label><span>Phone height above the floor</span><span id="heightValue">1.40 m</span></label>
-    <input id="height" type="range" min="1.00" max="1.80" step="0.05" value="1.40">
-    <small>Hold the phone at about chest height and keep it there. Every distance is worked out from this number, so measure it once for a better result.</small>
+    <input id="height" type="range" min="0.60" max="2.00" step="0.01" value="1.40">
+    <small>Every distance is worked out from this number. If it is wrong, the whole plan comes out too big or too small. You can fix it afterwards: measure one wall with a tape and tap that wall's length on the plan.</small>
   </div>
   <div class="asks">
     <b>Your phone will ask for two permissions</b>
@@ -116,6 +117,7 @@
 
 <section id="result" class="screen">
   <canvas id="plan"></canvas>
+  <div id="scaleNote" class="note">Sizes look wrong? Measure one wall with a tape, then tap that wall's length on the plan to correct everything.</div>
   <label class="options"><input id="squared" type="checkbox" checked> Straighten the walls</label>
   <div class="bar">
     <button id="share" class="primary">Share PDF</button>
